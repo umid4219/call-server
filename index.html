@@ -1,1 +1,305 @@
 
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMAN - Call Log Dashboard</title>
+    <style>
+        /* --- Переменные и базовые стили (Rich Dark Brown Theme) --- */
+        :root {
+            --bg-color: #0d0a08; /* Глубокий темно-коричневый */
+            --card-bg: #1a1410; /* Теплый кофейно-шоколадный для карточек */
+            --text-primary: #f2ede4; /* Мягкий светлый текст */
+            --text-secondary: #a69b90; /* Приглушенный серо-бежевый */
+            --accent-gold: #d4af37; /* Насыщенное благородное золото */
+            --hover-gold: #e5c158; 
+            --border-color: rgba(212, 175, 55, 0.15); /* Теплая золотистая рамка */
+            --box-shadow: 0 10px 30px rgba(13, 10, 8, 0.6);
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% -15%, rgba(138, 98, 56, 0.35), transparent 55%),
+                radial-gradient(circle at 20% 30%, rgba(77, 48, 26, 0.2), transparent 40%);
+        }
+
+        /* --- Шапка (Header) --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(26, 20, 16, 0.85);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.6));
+            object-fit: contain;
+        }
+
+        /* Стиль для слова IMAN в шапке */
+        .logo-text {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #ffffff;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .header-status {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* --- Основной контент --- */
+        main {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #fff;
+        }
+
+        /* --- Карточки статистики --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .stat-card {
+            background: linear-gradient(145deg, #1f1712, #150f0c);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+            opacity: 0.7;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+            border-color: rgba(212, 175, 55, 0.3);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-subvalue {
+            font-size: 15px;
+            color: var(--accent-gold);
+            margin-top: 4px;
+        }
+
+        /* --- Блок скачивания --- */
+        .download-section {
+            background: linear-gradient(145deg, #231a14, #18110e);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-top: auto;
+            box-shadow: var(--box-shadow);
+        }
+
+        .download-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 600px;
+        }
+
+        .download-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .download-description {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        /* --- Золотая кнопка --- */
+        .download-btn {
+            background: linear-gradient(135deg, #e6c587 0%, #c59f59 100%);
+            color: #120d0a;
+            border: none;
+            border-radius: 50px;
+            padding: 18px 36px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(197, 159, 89, 0.35);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .download-btn:hover {
+            background: linear-gradient(135deg, #f3d499 0%, #d4ae66 100%);
+            transform: scale(1.03);
+            box-shadow: 0 6px 25px rgba(197, 159, 89, 0.5);
+        }
+
+        .download-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* --- Footer --- */
+        footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 40px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 40px;
+            background-color: rgba(13, 10, 8, 0.5);
+        }
+
+        .footer-dev {
+            color: var(--text-secondary);
+            font-style: normal;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            header { padding: 15px 20px; }
+            main { padding: 20px; gap: 20px; }
+            h1 { font-size: 24px; }
+            .stat-value { font-size: 28px; }
+            .download-section { flex-direction: column; align-items: flex-start; padding: 24px; }
+            .download-btn { width: 100%; }
+            footer { flex-direction: column; gap: 10px; text-align: center; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <img src="image_8.png" alt="Logo" class="logo-icon">
+            <span class="logo-text">IMAN</span>
+        </div>
+        <div class="header-status">Панель управления</div>
+    </header>
+
+    <main>
+        <div class="page-header">
+            <h1>Сводка по звонкам</h1>
+        </div>
+
+        <div class="stats-grid">
+            <!-- Карточка 1 -->
+            <div class="stat-card">
+                <div class="stat-label">Всего звонков (48ч)</div>
+                <div class="stat-value" id="total-calls">• • •</div>
+                <div class="stat-subvalue">Актуальные данные</div>
+            </div>
+
+            <!-- Карточка 2 -->
+            <div class="stat-card">
+                <div class="stat-label">Общее время разговоров</div>
+                <div class="stat-value" id="total-duration">• • •</div>
+                <div class="stat-subvalue">Входящие + Исходящие</div>
+            </div>
+        </div>
+
+        <!-- Блок скачивания -->
+        <div class="download-section">
+            <div class="download-info">
+                <div class="download-title">Скачать детальный отчет сотрудников</div>
+                <div class="download-description">Получить Excel-файл (XLSX) с двумя вкладками: полным журналом звонков и сводкой по сотрудникам (за последние 48 часов).</div>
+            </div>
+            <a href="/download-report" class="download-btn">Скачать отчет</a>
+        </div>
+
+    </main>
+
+    <footer>
+        <div>IMAN Call Log Dashboard © 2026</div>
+        <div class="footer-dev">Developed by Ravshanov</div>
+    </footer>
+
+</body>
+</html>
