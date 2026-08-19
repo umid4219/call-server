@@ -44,8 +44,21 @@ async def receive_log(request: Request):
     for item in items:
         call_id = item.get("ID", "Unknown")
         contact_number = item.get("NUMBER", "Unknown")
-        call_type = item.get("TYPE", "Unknown")
         duration = item.get("DURATION", 0)
+
+        # Конвертируем тип звонка из цифры в читаемый текст
+        raw_type = item.get("TYPE", 0)
+        call_type_map = {
+            1: "Входящий",
+            2: "Исходящий",
+            3: "Пропущенный",
+            5: "Отклоненный",
+            6: "Заблокированный"
+        }
+        try:
+            call_type = call_type_map.get(int(raw_type), f"Другой ({raw_type})")
+        except Exception:
+            call_type = str(raw_type)
 
         # Конвертируем миллисекунды в красивую дату и время
         raw_date = item.get("DATE", 0)
