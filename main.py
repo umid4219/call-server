@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta
 import csv
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 import pandas as pd
 import uvicorn
 
@@ -151,9 +151,12 @@ async def download_report():
         filename="Call_Report.xlsx",
     )
 
-@app.get("/")
-def read_root():
-    return {"message": "Server is running"}
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    if os.path.exists("index.html"):
+        with open("index.html", "r", encoding="utf-8") as f:
+            return f.read()
+    return "<h1>Файл index.html не найден на сервере</h1>"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
