@@ -10,17 +10,17 @@ app = FastAPI()
 
 DATA_FILE = "call_logs.csv"
 
-# Создаем файл с заголовками, если его еще нет
+# Создаем файл с русскими заголовками, если его еще нет
 if not os.path.exists(DATA_FILE):
     with open(DATA_FILE, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow([
-            "Device Name",
-            "Phone Number",
-            "Call Type",
-            "Contact Number",
-            "Date & Time",
-            "Duration (sec)",
+            "Имя устройства",
+            "Номер телефона",
+            "Тип звонка",
+            "Номер контакта",
+            "Дата и время",
+            "Длительность (сек)",
         ])
 
 @app.post("/log")
@@ -32,14 +32,14 @@ async def receive_log(request: Request):
 
     items = body if isinstance(body, list) else [body]
     
-    device_name = request.headers.get("Device-Name", "Unknown")
-    phone_number = request.headers.get("Device-Number", "Unknown")
+    device_name = request.headers.get("Device-Name", "Неизвестно")
+    phone_number = request.headers.get("Device-Number", "Неизвестно")
 
     rows_to_write = []
     time_threshold = datetime.now() - timedelta(hours=48)
 
     for item in items:
-        contact_number = item.get("NUMBER", "Unknown")
+        contact_number = item.get("NUMBER", "Неизвестно")
         duration = item.get("DURATION", 0)
 
         raw_type = item.get("TYPE", 0)
@@ -58,8 +58,10 @@ async def receive_log(request: Request):
         raw_date = item.get("DATE", 0)
         try:
             timestamp_ms = int(raw_date)
+            # Переводим в дату и добавляем 5 часов для местного времени (Ташкент UTC+5)
             call_dt = datetime.fromtimestamp(timestamp_ms / 1000.0) + timedelta(hours=5)
             
+            # Отсекаем звонки старше 48 часов
             if call_dt < time_threshold:
                 continue
                 
@@ -91,8 +93,7 @@ async def download_report():
     if df.empty:
         return {"error": "Call log is empty"}
 
-    # --- 1. Обработка первого листа (Sheet1) ---
-    # Переводим секунды длительности в формат "минуты:секунды" или читаемые минуты
+    # --- 1. Первый лист: Звонки ---
     def format_duration(sec):
         try:
             sec = int(sec)
@@ -103,46 +104,41 @@ async def download_report():
             return "0 мин 0 сек"
 
     df_sheet1 = df.copy()
-    df_sheet1["Duration"] = df_sheet1["Duration (sec)"].apply(format_duration)
-    df_sheet1 = df_sheet1.drop(columns=["Duration (sec)"])
-    df_sheet1 = df_sheet1.rename(columns={"Duration": "Duration (Min:Sec)"})
+    df_sheet1["Длительность"] = df_sheet1["Длительность (сек)"].apply(format_duration)
+    df_sheet1 = df_sheet1.drop(columns=["Длительность (сек)"])
 
-    # --- 2. Создание сводки для второго листа (Sheet2) ---
+    # --- 2. Второй лист: Сводка по сотрудникам ---
     summary_data = []
-    # Группируем по сотруднику (Имя устройства + номер телефона)
-    grouped = df.groupby(["Device Name", "Phone Number"])
+    grouped = df.groupby(["Имя устройства", "Номер телефона"])
 
     for (dev_name, dev_phone), group in grouped:
         total_calls = len(group)
+        incoming = len(group[group["Тип звонка"] == "Входящий"])
+        outgoing = len(group[group["Тип звонка"] == "Исходящий"])
+        missed = len(group[group["Тип звонка"].isin(["Пропущенный", "Отклоненный"])])
         
-        # Считаем типы звонков
-        incoming = len(group[group["Call Type"] == "Входящий"])
-        outgoing = len(group[group["Call Type"] == "Исходящий"])
-        missed = len(group[group["Call Type"].isin(["Пропущенный", "Отклоненный"])])
-        
-        # Общее время в секундах -> переводим в часы и минуты
-        total_sec = group["Duration (sec)"].sum()
+        total_sec = group["Длительность (сек)"].sum()
         hours = total_sec // 3600
         minutes = (total_sec % 3600) // 60
         seconds = total_sec % 60
         total_time_str = f"{hours} ч {minutes} мин {seconds} сек"
 
         summary_data.append({
-            "Device Name": dev_name,
-            "Phone Number": dev_phone,
-            "Total Calls": total_calls,
-            "Incoming": incoming,
-            "Outgoing": outgoing,
-            "Missed": missed,
-            "Total Duration": total_time_str
+            "Имя устройства": dev_name,
+            "Номер телефона": dev_phone,
+            "Всего звонков": total_calls,
+            "Входящие": incoming,
+            "Исходящие": outgoing,
+            "Пропущенные": missed,
+            "Общее время": total_time_str
         })
 
     df_sheet2 = pd.DataFrame(summary_data)
 
-    # --- 3. Сохранение в Excel с двумя вкладками ---
+    # --- 3. Сохранение файла Excel с двумя вкладками ---
     output_filename = "Call_Report.xlsx"
     with pd.ExcelWriter(output_filename, engine="openpyxl") as writer:
-        df_sheet1.to_excel(writer, sheet_name="Звонки", index=False)
+        df_sheet1.to_excel(writer, sheet_name="Журнал звонков", index=False)
         df_sheet2.to_excel(writer, sheet_name="Сводка по сотрудникам", index=False)
 
     return FileResponse(
