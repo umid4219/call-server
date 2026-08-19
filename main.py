@@ -61,13 +61,14 @@ async def receive_log(request: Request):
             call_type = str(raw_type)
 
         # Конвертируем миллисекунды в дату
+# Конвертируем миллисекунды в дату
         raw_date = item.get("DATE", 0)
         try:
             timestamp_ms = int(raw_date)
-            call_dt = datetime.fromtimestamp(timestamp_ms / 1000.0)
+            # Переводим в дату и прибавляем 5 часов (UTC+5 для корректного местного времени)
+            call_dt = datetime.fromtimestamp(timestamp_ms / 1000.0) + timedelta(hours=5)
             
-            # ПЕРЕХВАТ И ФИЛЬТРАЦИЯ НА СТОРОНЕ PYTHON:
-            # Если звонок старше 48 часов — просто пропускаем его!
+            # Если звонок старше 48 часов — пропускаем
             if call_dt < time_threshold:
                 continue
                 
