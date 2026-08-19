@@ -21,7 +21,6 @@ if not os.path.exists(DATA_FILE):
             "Contact Number",
             "Date & Time",
             "Duration (sec)",
-            "Received At",
         ])
 
 @app.post("/log")
@@ -37,38 +36,30 @@ async def receive_log(request: Request):
     phone_number = request.headers.get("Device-Number", "Unknown")
 
     rows_to_write = []
-    received_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Порог: ровно 48 часов назад от текущего момента на сервере
     time_threshold = datetime.now() - timedelta(hours=48)
 
     for item in items:
         contact_number = item.get("NUMBER", "Unknown")
         duration = item.get("DURATION", 0)
 
-        # Конвертируем тип звонка из цифры в текст
         raw_type = item.get("TYPE", 0)
         call_type_map = {
             1: "Входящий",
             2: "Исходящий",
             3: "Пропущенный",
             5: "Отклоненный",
-            6: "Заблокированный"
+            6: "Пропущенный"
         }
         try:
             call_type = call_type_map.get(int(raw_type), f"Другой ({raw_type})")
         except Exception:
             call_type = str(raw_type)
 
-        # Конвертируем миллисекунды в дату
-# Конвертируем миллисекунды в дату
         raw_date = item.get("DATE", 0)
         try:
             timestamp_ms = int(raw_date)
-            # Переводим в дату и прибавляем 5 часов (UTC+5 для корректного местного времени)
             call_dt = datetime.fromtimestamp(timestamp_ms / 1000.0) + timedelta(hours=5)
             
-            # Если звонок старше 48 часов — пропускаем
             if call_dt < time_threshold:
                 continue
                 
@@ -83,7 +74,6 @@ async def receive_log(request: Request):
             contact_number,
             call_date,
             duration,
-            received_at,
         ])
 
     with open(DATA_FILE, "a", newline="", encoding="utf-8") as f:
@@ -98,14 +88,66 @@ async def download_report():
         return {"error": "No data found"}
 
     df = pd.read_csv(DATA_FILE)
+    if df.empty:
+        return {"error": "Call log is empty"}
+
+    # --- 1. Обработка первого листа (Sheet1) ---
+    # Переводим секунды длительности в формат "минуты:секунды" или читаемые минуты
+    def format_duration(sec):
+        try:
+            sec = int(sec)
+            m = sec // 60
+            s = sec % 60
+            return f"{m} мин {s} сек"
+        except:
+            return "0 мин 0 сек"
+
+    df_sheet1 = df.copy()
+    df_sheet1["Duration"] = df_sheet1["Duration (sec)"].apply(format_duration)
+    df_sheet1 = df_sheet1.drop(columns=["Duration (sec)"])
+    df_sheet1 = df_sheet1.rename(columns={"Duration": "Duration (Min:Sec)"})
+
+    # --- 2. Создание сводки для второго листа (Sheet2) ---
+    summary_data = []
+    # Группируем по сотруднику (Имя устройства + номер телефона)
+    grouped = df.groupby(["Device Name", "Phone Number"])
+
+    for (dev_name, dev_phone), group in grouped:
+        total_calls = len(group)
+        
+        # Считаем типы звонков
+        incoming = len(group[group["Call Type"] == "Входящий"])
+        outgoing = len(group[group["Call Type"] == "Исходящий"])
+        missed = len(group[group["Call Type"].isin(["Пропущенный", "Отклоненный"])])
+        
+        # Общее время в секундах -> переводим в часы и минуты
+        total_sec = group["Duration (sec)"].sum()
+        hours = total_sec // 3600
+        minutes = (total_sec % 3600) // 60
+        seconds = total_sec % 60
+        total_time_str = f"{hours} ч {minutes} мин {seconds} сек"
+
+        summary_data.append({
+            "Device Name": dev_name,
+            "Phone Number": dev_phone,
+            "Total Calls": total_calls,
+            "Incoming": incoming,
+            "Outgoing": outgoing,
+            "Missed": missed,
+            "Total Duration": total_time_str
+        })
+
+    df_sheet2 = pd.DataFrame(summary_data)
+
+    # --- 3. Сохранение в Excel с двумя вкладками ---
     output_filename = "Call_Report.xlsx"
-    df.to_excel(output_filename, index=False)
+    with pd.ExcelWriter(output_filename, engine="openpyxl") as writer:
+        df_sheet1.to_excel(writer, sheet_name="Звонки", index=False)
+        df_sheet2.to_excel(writer, sheet_name="Сводка по сотрудникам", index=False)
 
     return FileResponse(
         output_filename,
-        media_type=(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        ),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         filename="Call_Report.xlsx",
     )
 
