@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import csv
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
@@ -31,22 +31,22 @@ async def receive_log(request: Request):
     except Exception:
         body = []
 
-    # Android шлет массив звонков (JSONArray)
     items = body if isinstance(body, list) else [body]
     
-    # Получаем заголовки устройства из запроса
     device_name = request.headers.get("Device-Name", "Unknown")
     phone_number = request.headers.get("Device-Number", "Unknown")
 
     rows_to_write = []
     received_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # Порог: ровно 48 часов назад от текущего момента на сервере
+    time_threshold = datetime.now() - timedelta(hours=48)
+
     for item in items:
-        call_id = item.get("ID", "Unknown")
         contact_number = item.get("NUMBER", "Unknown")
         duration = item.get("DURATION", 0)
 
-        # Конвертируем тип звонка из цифры в читаемый текст
+        # Конвертируем тип звонка из цифры в текст
         raw_type = item.get("TYPE", 0)
         call_type_map = {
             1: "Входящий",
@@ -60,11 +60,18 @@ async def receive_log(request: Request):
         except Exception:
             call_type = str(raw_type)
 
-        # Конвертируем миллисекунды в красивую дату и время
+        # Конвертируем миллисекунды в дату
         raw_date = item.get("DATE", 0)
         try:
             timestamp_ms = int(raw_date)
-            call_date = datetime.fromtimestamp(timestamp_ms / 1000.0).strftime("%Y-%m-%d %H:%M:%S")
+            call_dt = datetime.fromtimestamp(timestamp_ms / 1000.0)
+            
+            # ПЕРЕХВАТ И ФИЛЬТРАЦИЯ НА СТОРОНЕ PYTHON:
+            # Если звонок старше 48 часов — просто пропускаем его!
+            if call_dt < time_threshold:
+                continue
+                
+            call_date = call_dt.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
             call_date = str(raw_date)
 
