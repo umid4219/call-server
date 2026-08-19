@@ -88,6 +88,32 @@ async def receive_log(request: Request):
 
     return {"status": "success", "saved": len(rows_to_write)}
 
+@app.get("/api/stats")
+async def get_stats():
+    if not os.path.exists(DATA_FILE):
+        return {"total_calls": 0, "total_duration": "0 мин"}
+    
+    df = pd.read_csv(DATA_FILE)
+    if df.empty:
+        return {"total_calls": 0, "total_duration": "0 мин"}
+    
+    total_calls = len(df)
+    total_sec = df["Длительность (сек)"].sum()
+    
+    hours = int(total_sec // 3600)
+    minutes = int((total_sec % 3600) // 60)
+    seconds = int(total_sec % 60)
+    
+    if hours > 0:
+        duration_str = f"{hours} ч {minutes} мин"
+    else:
+        duration_str = f"{minutes} мин {seconds} сек"
+        
+    return {
+        "total_calls": total_calls,
+        "total_duration": duration_str
+    }
+
 @app.get("/download-report")
 async def download_report():
     if not os.path.exists(DATA_FILE):
