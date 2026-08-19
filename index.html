@@ -31,6 +31,104 @@
                 radial-gradient(circle at 20% 30%, rgba(77, 48, 26, 0.2), transparent 40%);
         }
 
+        /* --- Окно ввода пароля (Overlay) --- */
+        #password-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(13, 10, 8, 0.92);
+            backdrop-filter: blur(16px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .pass-box {
+            background: linear-gradient(145deg, #1f1712, #150f0c);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: var(--box-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pass-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+            opacity: 0.8;
+        }
+
+        .pass-box .logo-container {
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .pass-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        .pass-input {
+            width: 100%;
+            padding: 16px 20px;
+            background-color: #0c0907;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 16px;
+            outline: none;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .pass-input:focus {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .pass-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #e6c587 0%, #c59f59 100%);
+            color: #120d0a;
+            border: none;
+            border-radius: 50px;
+            padding: 16px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(197, 159, 89, 0.35);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .pass-btn:hover {
+            background: linear-gradient(135deg, #f3d499 0%, #d4ae66 100%);
+            transform: scale(1.02);
+        }
+
+        .pass-error {
+            color: #e74c3c;
+            font-size: 13px;
+            margin-top: 12px;
+            display: none;
+        }
+
+        /* --- Основной интерфейс --- */
         header {
             display: flex;
             justify-content: space-between;
@@ -63,11 +161,6 @@
             font-weight: 800;
             letter-spacing: 2px;
             color: #ffffff;
-        }
-
-        .header-status {
-            font-size: 14px;
-            color: var(--text-secondary);
         }
 
         main {
@@ -125,11 +218,6 @@
             font-size: 36px;
             font-weight: 700;
             color: var(--text-primary);
-        }
-
-        .stat-subvalue {
-            font-size: 15px;
-            color: var(--accent-gold);
             margin-top: 4px;
         }
 
@@ -163,7 +251,7 @@
             color: #120d0a;
             border: none;
             border-radius: 50px;
-            padding: 18px 36px;
+            padding: 18px 45px;
             font-size: 15px;
             font-weight: 700;
             cursor: pointer;
@@ -206,12 +294,26 @@
 </head>
 <body>
 
+    <!-- Модальное окно авторизации -->
+    <div id="password-overlay">
+        <div class="pass-box">
+            <div class="logo-container">
+                <div class="logo-dot"></div>
+                <span class="logo-text">IMAN</span>
+            </div>
+            <div class="pass-title">Введите пароль доступа</div>
+            <input type="password" id="pass-input" class="pass-input" placeholder="••••••••" onkeydown="if(event.key==='Enter') checkPass()">
+            <button class="pass-btn" onclick="checkPass()">Войти</button>
+            <div id="pass-error" class="pass-error">Неверный пароль</div>
+        </div>
+    </div>
+
+    <!-- Контент дашборда -->
     <header>
         <div class="logo-container">
             <div class="logo-dot"></div>
             <span class="logo-text">IMAN</span>
         </div>
-        <div class="header-status">Панель управления</div>
     </header>
 
     <main>
@@ -223,13 +325,11 @@
             <div class="stat-card">
                 <div class="stat-label">Всего звонков (48ч)</div>
                 <div class="stat-value" id="total-calls">0</div>
-                <div class="stat-subvalue">Актуальные данные</div>
             </div>
 
             <div class="stat-card">
                 <div class="stat-label">Общее время разговоров</div>
                 <div class="stat-value" id="total-duration">0 мин</div>
-                <div class="stat-subvalue">Входящие + Исходящие</div>
             </div>
         </div>
 
@@ -238,7 +338,7 @@
                 <div class="download-title">Скачать детальный отчет сотрудников</div>
                 <div class="download-description">Получить Excel-файл (XLSX) с полным журналом звонков и сводкой за последние 48 часов.</div>
             </div>
-            <a href="/download-report" class="download-btn">Скачать отчет</a>
+            <a href="/download-report" class="download-btn">Отчет</a>
         </div>
     </main>
 
@@ -248,6 +348,25 @@
     </footer>
 
     <script>
+        // 1. Укажите ваш пароль здесь
+        const CORRECT_PASSWORD = "123";
+
+        // Проверка пароля
+        function checkPass() {
+            const passInput = document.getElementById('pass-input').value;
+            const errorElement = document.getElementById('pass-error');
+            
+            if (passInput === CORRECT_PASSWORD) {
+                document.getElementById('password-overlay').style.display = 'none';
+                fetchStats();
+                setInterval(fetchStats, 5000);
+            } else {
+                errorElement.style.display = 'block';
+                document.getElementById('pass-input').value = '';
+            }
+        }
+
+        // Загрузка статистики
         async function fetchStats() {
             try {
                 const response = await fetch('/api/stats');
@@ -259,9 +378,6 @@
                 console.error('Ошибка загрузки данных:', error);
             }
         }
-
-        fetchStats();
-        setInterval(fetchStats, 5000);
     </script>
 
 </body>
