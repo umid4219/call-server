@@ -55,6 +55,10 @@ async def receive_log(request: Request):
         except Exception:
             call_type = str(raw_type)
 
+        # Если звонок пропущенный или отклоненный, принудительно ставим длительность 0 секунд
+        if call_type in ["Пропущенный", "Отклоненный"]:
+            duration = 0
+
         raw_date = item.get("DATE", 0)
         try:
             timestamp_ms = int(raw_date)
