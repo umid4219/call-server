@@ -45,8 +45,15 @@ async def receive_log(request: Request):
         call_id = item.get("ID", "Unknown")
         contact_number = item.get("NUMBER", "Unknown")
         call_type = item.get("TYPE", "Unknown")
-        call_date = item.get("DATE", "Unknown")
         duration = item.get("DURATION", 0)
+
+        # Конвертируем миллисекунды в красивую дату и время
+        raw_date = item.get("DATE", 0)
+        try:
+            timestamp_ms = int(raw_date)
+            call_date = datetime.fromtimestamp(timestamp_ms / 1000.0).strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            call_date = str(raw_date)
 
         rows_to_write.append([
             device_name,
